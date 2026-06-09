@@ -28,6 +28,12 @@ workflows:
           cd app
           # Compiles iOS release build and exports the .ipa package
           flutter build ipa --release --no-codesign
+          
+          # Manually package the unsigned Runner.app into an unsigned .ipa
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r app.ipa Payload
     artifacts:
       - app/build/ios/ipa/*.ipa
 
