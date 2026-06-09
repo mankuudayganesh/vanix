@@ -1,0 +1,68 @@
+# Codemagic CI/CD Configuration for VANIX Monorepo
+
+workflows:
+  ios-release:
+    name: iOS Release (.ipa)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      # For automated iOS signing, define your App Store Connect API keys in the Codemagic UI (Environment variables)
+      # or specify the group name containing them below:
+      # groups:
+      #   - app-store-credentials
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+    scripts:
+      - name: Fetch iOS signing files
+        script: |
+          # Automatically fetch profile & certificate from App Store Connect API keys
+          # If API keys are setup, uncomment the line below:
+          # app-store-connect fetch-signing-files "com.example.vanix" --type IOS_APP_STORE --create
+          
+          # Initialize keychain for build
+          keychain initialize
+          if [ -d "$HOME/Library/MobileDevice/Provisioning Profiles" ]; then
+            keychain add-certificates
+          else
+            echo "Signing certificates not found. Set up environment variables on Codemagic for automatic signing."
+          fi
+      - name: Install dependencies
+        script: |
+          cd app
+          flutter pub get
+      - name: Build iOS IPA
+        script: |
+          cd app
+          # Compiles iOS release build and exports the .ipa package
+          flutter build ipa --release --no-codesign
+    artifacts:
+      - app/build/ios/ipa/*.ipa
+
+  android-release:
+    name: Android Release (.apk)
+    max_build_duration: 30
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd app
+          flutter pub get
+      - name: Build Android APK
+        script: |
+          cd app
+          flutter build apk --release
+    artifacts:
+      - app/build/app/outputs/flutter-apk/*.apk
