@@ -32,6 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   late Animation<double> _glowAnimation;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
@@ -46,9 +47,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 1000), // Slightly longer for the elastic bounce to be satisfying
     )..forward();
     _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: const Interval(0.1, 0.9, curve: Curves.elasticOut),
+      ),
+    );
   }
 
   @override
@@ -269,18 +276,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: VanixColors.vanixRed.withOpacity(0.25 * _glowAnimation.value),
-                blurRadius: 35,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
+        return ScaleTransition(
+          scale: _scaleAnimation,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: VanixColors.vanixRed.withOpacity(0.25 * _glowAnimation.value),
+                  blurRadius: 35,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -329,10 +338,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildWelcomeText() {
     return Column(

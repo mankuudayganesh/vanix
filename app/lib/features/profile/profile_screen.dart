@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/vanix_colors.dart';
+import '../../core/providers/profile_provider.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/models/models.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -13,18 +16,10 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // Mock states
-  String _activeProfileName = 'Alex';
-  int _activeProfileIndex = 0;
   bool _notificationsEnabled = true;
   String _videoQuality = 'Auto (Best Quality)';
   String _downloadQuality = 'Standard (Saves Storage)';
   String _language = 'English';
-
-  final List<Map<String, String>> _profiles = [
-    {'name': 'Alex', 'avatar': 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'},
-    {'name': 'Sarah', 'avatar': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100'},
-    {'name': 'Kids', 'avatar': 'https://images.unsplash.com/photo-1607990283143-e81e7a2c93ab?w=100'},
-  ];
 
   void _addProfile() {
     TextEditingController nameController = TextEditingController();
@@ -56,15 +51,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () {
               final name = nameController.text.trim();
               if (name.isNotEmpty) {
-                setState(() {
-                  _profiles.add({
-                    'name': name,
-                    'avatar': 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100',
-                  });
-                });
+                final newProfile = Profile(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: name,
+                  avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100',
+                );
+                ref.read(profilesProvider.notifier).update((state) => [...state, newProfile]);
                 Navigator.pop(context);
               }
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: VanixColors.vanixRed,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Add'),
           ),
         ],
@@ -165,7 +164,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context); // Close dialog
-              context.go('/login'); // Redirect to login
+              ref.read(authProvider.notifier).logout();
+              ref.read(selectedProfileProvider.notifier).state = null;
             },
             style: ElevatedButton.styleFrom(backgroundColor: VanixColors.vanixRed),
             child: const Text('Log Out'),
@@ -177,6 +177,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profiles = ref.watch(profilesProvider);
+    final activeProfile = ref.watch(selectedProfileProvider);
+
     return Scaffold(
       backgroundColor: VanixColors.bgPrimary,
       appBar: AppBar(
@@ -205,10 +208,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                itemCount: _profiles.length + 1,
+                itemCount: profiles.length + 1,
                 separatorBuilder: (_, __) => const SizedBox(width: 16),
                 itemBuilder: (context, index) {
-                  if (index == _profiles.length) {
+                  if (index == profiles.length) {
                     // "Add Profile" button
                     return Column(
                       children: [
@@ -234,17 +237,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     );
                   }
 
-                  final prof = _profiles[index];
-                  final isActive = _activeProfileIndex == index;
+                  final prof = profiles[index];
+                  final isActive = activeProfile?.id == prof.id;
 
                   return Column(
                     children: [
                       GestureDetector(
                         onTap: () {
-                          setState(() {
-                            _activeProfileIndex = index;
-                            _activeProfileName = prof['name']!;
-                          });
+                          ref.read(selectedProfileProvider.notifier).state = prof;
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -257,7 +257,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               width: 2.5,
                             ),
                             image: DecorationImage(
-                              image: NetworkImage(prof['avatar']!),
+                              image: NetworkImage(prof.avatarUrl ?? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'),
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -265,7 +265,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        prof['name']!,
+                        prof.name,
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
@@ -291,11 +291,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 26,
-                    backgroundColor: VanixColors.vanixRed,
-                    child: Text(
-                      _activeProfileName.isNotEmpty ? _activeProfileName[0].toUpperCase() : 'U',
-                      style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
+                    backgroundColor: activeProfile?.isKids == true ? Colors.orange : VanixColors.vanixRed,
+                    backgroundImage: activeProfile?.avatarUrl != null ? NetworkImage(activeProfile!.avatarUrl!) : null,
+                    child: activeProfile?.avatarUrl == null
+                        ? Text(
+                            activeProfile?.name.isNotEmpty == true ? activeProfile!.name[0].toUpperCase() : 'U',
+                            style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -303,7 +306,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Alex Harrison',
+                          activeProfile?.name ?? 'Alex Harrison',
                           style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
                         ),
                         Text(

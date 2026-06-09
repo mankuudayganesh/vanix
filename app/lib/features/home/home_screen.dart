@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/vanix_colors.dart';
+import '../../core/providers/profile_provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   final PageController _heroController = PageController();
   int _currentHeroIndex = 0;
 
@@ -50,6 +52,65 @@ class _HomeScreenState extends State<HomeScreen> {
     {'title': 'Cyberpunk Nights', 'type': 'Sci-Fi • Thriller • 2 Seasons'},
   ];
 
+  // Kids Mock Data
+  final List<Map<String, dynamic>> kidsHeroBanners = [
+    {'title': 'ADVENTURE ISLAND', 'subtitle': 'Family Fun Movie', 'tag': 'KIDS FAVORITE', 'description': 'Join Sammy the squirrel and his friends on a fun journey to retrieve the golden acorns of Adventure Island.', 'color': Color(0xFF1A2E3E)},
+    {'title': 'SPACE PETS', 'subtitle': 'Season 1 Out Now', 'tag': 'VANIX KIDS', 'description': 'Cute robotic dogs and cats fly into deep space to help alien worlds solve funny problems.', 'color': Color(0xFF3E1A2E)},
+  ];
+
+  final List<Map<String, String>> kidsContinueWatching = [
+    {'title': 'Space Pets', 'episode': 'S1 E3', 'progress': '0.80'},
+    {'title': 'Toy Stories', 'episode': 'Special', 'progress': '0.25'},
+  ];
+
+  final List<Map<String, String>> kidsTrendingContent = [
+    {'title': 'Adventure Island', 'genre': 'Fantasy', 'rating': '9.0'},
+    {'title': 'Space Pets', 'genre': 'Comedy', 'rating': '8.8'},
+    {'title': 'Toy Stories', 'genre': 'Family', 'rating': '8.7'},
+    {'title': 'Little Warriors', 'genre': 'Action', 'rating': '8.5'},
+    {'title': 'Cartoon Beat', 'genre': 'Music', 'rating': '8.3'},
+    {'title': 'Animal Magic', 'genre': 'Documentary', 'rating': '8.2'},
+  ];
+
+  final List<Map<String, String>> kidsTop10 = [
+    {'title': 'Space Pets', 'genre': 'Comedy'},
+    {'title': 'Adventure Island', 'genre': 'Fantasy'},
+    {'title': 'Toy Stories', 'genre': 'Family'},
+    {'title': 'Cartoon Beat', 'genre': 'Music'},
+    {'title': 'Animal Magic', 'genre': 'Documentary'},
+  ];
+
+  final List<Map<String, String>> kidsOriginals = [
+    {'title': 'Space Pets', 'type': 'Comedy • Animation • 1 Season'},
+    {'title': 'Adventure Island', 'type': 'Adventure • Animation • Movie'},
+    {'title': 'Cartoon Beat', 'type': 'Music • Family • 2 Seasons'},
+  ];
+
+  List<Map<String, dynamic>> get currentHeroBanners {
+    final activeProfile = ref.watch(selectedProfileProvider);
+    return activeProfile?.isKids == true ? kidsHeroBanners : heroBanners;
+  }
+
+  List<Map<String, String>> get currentContinueWatching {
+    final activeProfile = ref.watch(selectedProfileProvider);
+    return activeProfile?.isKids == true ? kidsContinueWatching : continueWatching;
+  }
+
+  List<Map<String, String>> get currentTrendingContent {
+    final activeProfile = ref.watch(selectedProfileProvider);
+    return activeProfile?.isKids == true ? kidsTrendingContent : trendingContent;
+  }
+
+  List<Map<String, String>> get currentTop10 {
+    final activeProfile = ref.watch(selectedProfileProvider);
+    return activeProfile?.isKids == true ? kidsTop10 : top10India;
+  }
+
+  List<Map<String, String>> get currentOriginals {
+    final activeProfile = ref.watch(selectedProfileProvider);
+    return activeProfile?.isKids == true ? kidsOriginals : originals;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _autoSlide() {
     if (!mounted) return;
-    final nextPage = (_currentHeroIndex + 1) % heroBanners.length;
+    final nextPage = (_currentHeroIndex + 1) % currentHeroBanners.length;
     _heroController.animateToPage(
       nextPage,
       duration: const Duration(milliseconds: 800),
@@ -76,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeProfile = ref.watch(selectedProfileProvider);
     return Scaffold(
       backgroundColor: VanixColors.bgPrimary,
       body: CustomScrollView(
@@ -128,8 +190,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.only(right: 12),
                 child: CircleAvatar(
                   radius: 14,
-                  backgroundColor: VanixColors.vanixRed,
-                  child: Text('A', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                  backgroundColor: activeProfile?.isKids == true ? Colors.orange : VanixColors.vanixRed,
+                  backgroundImage: activeProfile?.avatarUrl != null ? NetworkImage(activeProfile!.avatarUrl!) : null,
+                  child: activeProfile?.avatarUrl == null
+                      ? Text(
+                          activeProfile?.name.isNotEmpty == true ? activeProfile!.name[0].toUpperCase() : 'U',
+                          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                        )
+                      : null,
                 ),
               ),
             ],
@@ -154,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _buildContentSection(
               'Trending Now',
               showSeeAll: true,
-              child: _buildContentRow(trendingContent, showBadge: true, badgeText: 'PREVIEW'),
+              child: _buildContentRow(currentTrendingContent, showBadge: true, badgeText: 'PREVIEW'),
             ),
           ),
 
@@ -179,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _buildContentSection(
               'Popular Movies',
               showSeeAll: true,
-              child: _buildContentRow(trendingContent.reversed.toList()),
+              child: _buildContentRow(currentTrendingContent.reversed.toList()),
             ),
           ),
 
@@ -188,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _buildContentSection(
               'Recently Added',
               showSeeAll: true,
-              child: _buildContentRow(trendingContent.take(4).toList()),
+              child: _buildContentRow(currentTrendingContent.take(4).toList()),
             ),
           ),
 
@@ -210,9 +278,9 @@ class _HomeScreenState extends State<HomeScreen> {
           PageView.builder(
             controller: _heroController,
             onPageChanged: (index) => setState(() => _currentHeroIndex = index),
-            itemCount: heroBanners.length,
+            itemCount: currentHeroBanners.length,
             itemBuilder: (context, index) {
-              final banner = heroBanners[index];
+              final banner = currentHeroBanners[index];
               return Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -333,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
             right: 0,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(heroBanners.length, (index) {
+              children: List.generate(currentHeroBanners.length, (index) {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -399,9 +467,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: continueWatching.length,
+        itemCount: currentContinueWatching.length,
         itemBuilder: (context, index) {
-          final item = continueWatching[index];
+          final item = currentContinueWatching[index];
           final progress = double.parse(item['progress']!);
           return Container(
             width: 220,
@@ -554,7 +622,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: top10India.length,
+        itemCount: currentTop10.length,
         itemBuilder: (context, index) {
           return Container(
             width: 140,
@@ -615,9 +683,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: originals.length,
+        itemCount: currentOriginals.length,
         itemBuilder: (context, index) {
-          final item = originals[index];
+          final item = currentOriginals[index];
           return Container(
             width: 180,
             margin: const EdgeInsets.only(right: 12),

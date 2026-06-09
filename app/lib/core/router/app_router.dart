@@ -7,16 +7,29 @@ import '../../features/search/search_screen.dart';
 import '../../features/content/content_detail_screen.dart';
 import '../../features/subscription/subscription_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/profile_select_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/downloads/downloads_screen.dart';
 import '../../features/player/video_player_screen.dart';
 import '../providers/auth_provider.dart';
+import '../providers/profile_provider.dart';
 import '../theme/vanix_colors.dart';
+
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen(authProvider, (_, __) => notifyListeners());
+    _ref.listen(selectedProfileProvider, (_, __) => notifyListeners());
+  }
+}
+
+final routerNotifierProvider = Provider((ref) => RouterNotifier(ref));
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
-    refreshListenable: _GoRouterRefreshStream(ref.watch(authProvider.notifier).stream),
+    refreshListenable: ref.watch(routerNotifierProvider),
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final status = authState.status;
@@ -32,7 +45,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return loggingIn ? null : '/login';
       }
 
-      if (loggingIn) {
+      final selectedProfile = ref.read(selectedProfileProvider);
+      final onProfileSelect = state.matchedLocation == '/profile-select';
+
+      if (selectedProfile == null) {
+        return onProfileSelect ? null : '/profile-select';
+      }
+
+      if (loggingIn || onProfileSelect) {
         return '/';
       }
 
@@ -74,6 +94,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/profile-select',
+        builder: (context, state) => const ProfileSelectScreen(),
       ),
       GoRoute(
         path: '/content/:id',
