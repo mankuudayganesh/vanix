@@ -19,19 +19,6 @@ workflows:
       branch_patterns:
         - pattern: main
     scripts:
-      - name: Fetch iOS signing files
-        script: |
-          # Automatically fetch profile & certificate from App Store Connect API keys
-          # If API keys are setup, uncomment the line below:
-          # app-store-connect fetch-signing-files "com.example.vanix" --type IOS_APP_STORE --create
-          
-          # Initialize keychain for build
-          keychain initialize
-          if [ -d "$HOME/Library/MobileDevice/Provisioning Profiles" ]; then
-            keychain add-certificates
-          else
-            echo "Signing certificates not found. Set up environment variables on Codemagic for automatic signing."
-          fi
       - name: Install dependencies
         script: |
           cd app
