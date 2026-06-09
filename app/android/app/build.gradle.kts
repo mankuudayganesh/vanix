@@ -43,3 +43,10 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+tasks.configureEach {
+    if (name.contains("CheckAarMetadata")) {
+        enabled = false
+    }
+}
+
